@@ -1,205 +1,79 @@
-from numpyro.distributions.distribution import Distribution
-from numpyro.distributions.continuous import Normal,HalfNormal
-import jax
 import jax.numpy as jnp
-from numpyro.distributions import constraints
-from numpyro.distributions.util import (
-    is_prng_key,
-    promote_shapes,
-    validate_sample,
-)
+import numpy as np
+from jax.scipy.special import erf
 
-def build_ar(total,new_element):
-    phi,w = new_element
-    total = phi*total+w
-    return total,total
+def truncatedNormal(samples,mu,sigma,lowCutoff,highCutoff):
 
-class TransformedUniform(Distribution):
+    """
+    Jax-enabled truncated normal distribution
+    
+    Parameters
+    ----------
+    samples : `jax.numpy.array` or float
+        Locations at which to evaluate probability density
+    mu : float
+        Mean of truncated normal
+    sigma : float
+        Standard deviation of truncated normal
+    lowCutoff : float
+        Lower truncation bound
+    highCutoff : float
+        Upper truncation bound
 
-    arg_constraints = {"low": constraints.real, "high": constraints.real}
-    support = constraints.real
-    reparameterized_params = ["low","high"]
+    Returns
+    -------
+    ps : jax.numpy.array or float
+        Probability density at the locations of `samples`
+    """
 
-    def __init__(self, low=0.0, high=1.0, *, validate_args=None):
+    a = (lowCutoff-mu)/jnp.sqrt(2*sigma**2)
+    b = (highCutoff-mu)/jnp.sqrt(2*sigma**2)
+    norm = jnp.sqrt(sigma**2*np.pi/2)*(-erf(a) + erf(b))
+    ps = jnp.exp(-(samples-mu)**2/(2.*sigma**2))/norm
+    return ps
 
-        self.low, self.high = promote_shapes(low, high)
-        batch_shape = jax.lax.broadcast_shapes(jnp.shape(low), jnp.shape(high))
-        self._support = constraints.interval(low, high)
-        super().__init__(batch_shape, validate_args=validate_args)
+def massModel(m1,alpha,mu_m1,sig_m1,f_peak,mMax,mMin,dmMax,dmMin):
 
-    @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self):
-        return self._support
+    """
+    Baseline primary mass model, described as a mixture between a power law
+    and gaussian, with exponential tapering functions at high and low masses
 
-    def sample(self, key, sample_shape=()):
-        assert is_prng_key(key)
+    Parameters
+    ----------
+    m1 : array or float
+        Primary masses at which to evaluate probability densities
+    alpha : float
+        Power-law index
+    mu_m1 : float
+        Location of possible Gaussian peak
+    sig_m1 : float
+        Stanard deviation of possible Gaussian peak
+    f_peak : float
+        Approximate fraction of events contained within Gaussian peak (not exact due to tapering)
+    mMax : float
+        Location at which high-mass tapering begins
+    mMin : float
+        Location at which low-mass tapering begins
+    dmMax : float
+        Scale width of high-mass tapering function
+    dmMin : float
+        Scale width of low-mass tapering function
 
-        # Sample on the reals from a normal distribution
-        logit_sample_unscaled = jax.random.normal(
-            key, shape=sample_shape + self.batch_shape + self.event_shape
-            )
-        logit_sample = 2.5*logit_sample_unscaled
+    Returns
+    -------
+    p_m1s : jax.numpy.array
+        Unnormalized array of probability densities
+    """
 
-        # Transform to variable bounded on (low,high)
-        exp_logit = jnp.exp(logit_sample)
-        x = (exp_logit*self.high + self.low)/(1.+exp_logit)
+    # Define power-law and peak
+    p_m1_pl = (1.+alpha)*m1**(alpha)/(tmp_max**(1.+alpha) - tmp_min**(1.+alpha))
+    p_m1_peak = jnp.exp(-(m1-mu_m1)**2/(2.*sig_m1**2))/jnp.sqrt(2.*np.pi*sig_m1**2)
 
-        return x
-        
-    @validate_sample
-    def log_prob(self,value):
+    # Compute low- and high-mass filters
+    low_filter = jnp.exp(-(m1-mMin)**2/(2.*dmMin**2))
+    low_filter = jnp.where(m1<mMin,low_filter,1.)
+    high_filter = jnp.exp(-(m1-mMax)**2/(2.*dmMax**2))
+    high_filter = jnp.where(m1>mMax,high_filter,1.)
 
-        # Jacobian from unbounded logit variable to bounded sample
-        dlogit_dx = 1./(value-self.low) + 1./(self.high-value)
-
-        # Subtract Gaussian log-prob and apply Jacobian
-        logit_value = jnp.log((value-self.low)/(self.high-value))
-        return logit_value**2/(2.*2.5**2)-jnp.log(dlogit_dx)
-
-class ARInitial(Distribution):
-
-    arg_constraints = {"std_min": constraints.real, "std_high": constraints.real}
-    support = constraints.real
-
-    def __init__(self,deltas,std_scale=1.177,tau_min=0.5,tau_max=1.,validate_args=None):
-
-        batch_shape = ()
-        event_shape = jnp.shape(deltas)
-
-        self._support = constraints.interval(tau_min, tau_max)
-        self.deltas = deltas
-        self.std_scale = std_scale
-        self.tau_min = tau_min
-        self.tau_max = tau_max
-
-        # Piecemeal distributions we'll sample from below
-        self._normal = Normal(0.,1.)
-        self._halfnormal = HalfNormal(1.)
-        self._transformeduniform = TransformedUniform(self.tau_min,self.tau_max)
-
-        super().__init__(batch_shape, event_shape, validate_args=validate_args)
-
-    @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self):
-        return self._support
-
-    def sample(self,key,sample_shape=()):
-        assert is_prng_key(key)
-
-        std_key,tau_key,ln_f_ref_key,steps_key = jax.random.split(key,4)
-
-        # Draw variance parameter from a standard normal
-        # Note that we'll assert an exp(-x**4) probability in `log_prob` below
-        ar_std = self._halfnormal.sample(std_key,sample_shape=sample_shape + self.batch_shape)
-
-        # Draw scale length parameter
-        ar_tau = self._transformeduniform.sample(tau_key,sample_shape=sample_shape + self.batch_shape)
-
-        # Draw inital value to seed AR process 
-        ln_f_ref_unscaled = self._normal.sample(ln_f_ref_key,sample_shape=sample_shape+self.batch_shape)
-        ln_f_ref = ln_f_ref_unscaled*ar_std
-
-        ln_f_steps_unscaled = self._normal.sample(steps_key,sample_shape=sample_shape+self.batch_shape+self.event_shape)
-        phis = jnp.exp(-self.deltas/ar_tau)
-        ws = jnp.sqrt(-jnp.expm1(-2.*self.deltas/ar_tau))*ar_std*ln_f_steps_unscaled
-        final,ln_fs = jax.lax.scan(build_ar,ln_f_ref,jnp.transpose(jnp.array([phis,ws])))
-        ln_fs = jnp.append(ln_f_ref,ln_fs)
-        ln_f_steps_unscaled = jnp.append(ln_f_ref_unscaled,ln_f_steps_unscaled)
-
-        return ar_std,ar_tau,ln_fs,ln_f_steps_unscaled
-
-    @validate_sample
-    def log_prob(self,values):
-
-        # Extract params
-        ar_std,ar_tau,ln_fs,ln_f_steps_unscaled = values
-
-        # Overwrite squared exponential with quadratic exponential
-        logp = -self._halfnormal.log_prob(ar_std) - (ar_std/self.std_scale)**4
-        logp += self._transformeduniform.log_prob(ar_tau)
-        logp += jnp.sum(self._normal.log_prob(ln_f_steps_unscaled))
-
-        return logp
-
-class AR(Distribution):
-
-    arg_constraints = {"std_min": constraints.real, "std_high": constraints.real}
-    support = constraints.real
-
-    def __init__(self,deltas,reference_index=0,std_scale=1.177,tau_min=0.5,tau_max=1.,validate_args=None):
-
-        batch_shape = ()
-        event_shape = jnp.shape(deltas)
-
-        self._support = constraints.interval(tau_min, tau_max)
-        self.deltas = deltas
-        self.reference_index=reference_index
-        self.std_scale = std_scale
-        self.tau_min = tau_min
-        self.tau_max = tau_max
-
-        # Piecemeal distributions we'll sample from below
-        self._normal = Normal(0.,1.)
-        self._halfnormal = HalfNormal(1.)
-        self._transformeduniform = TransformedUniform(self.tau_min,self.tau_max)
-
-        super().__init__(batch_shape, event_shape, validate_args=validate_args)
-
-    @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self):
-        return self._support
-
-    def sample(self,key,sample_shape=()):
-        assert is_prng_key(key)
-
-        std_key,tau_key,ln_f_ref_key,steps_key = jax.random.split(key,4)
-
-        # Draw variance parameter from a standard normal
-        # Note that we'll assert an exp(-x**4) probability in `log_prob` below
-        ar_std = self._halfnormal.sample(std_key,sample_shape=sample_shape + self.batch_shape)
-
-        # Draw scale length parameter
-        ar_tau = self._transformeduniform.sample(tau_key,sample_shape=sample_shape + self.batch_shape)
-
-        # Draw inital value to seed AR process 
-        ln_f_ref_unscaled = self._normal.sample(ln_f_ref_key,sample_shape=sample_shape+self.batch_shape)
-        ln_f_ref = ln_f_ref_unscaled*ar_std
-
-        # Split deltas into forward and backward steps
-        deltas_high = self.deltas[self.reference_index:]
-        deltas_low_reversed = self.deltas[:self.reference_index][::-1]
-
-        # Sample unscaled steps, split into forward and backward steps
-        ln_f_steps_unscaled = self._normal.sample(steps_key,sample_shape=sample_shape+self.batch_shape+self.event_shape)
-        ln_f_steps_unscaled_forward = ln_f_steps_unscaled[self.reference_index:]
-        ln_f_steps_unscaled_backward = ln_f_steps_unscaled[:self.reference_index]
-
-        # Build forward process
-        phis_forward = jnp.exp(-deltas_high/ar_tau)
-        ws_forward = jnp.sqrt(-jnp.expm1(-2.*deltas_high/ar_tau))*ar_std*ln_f_steps_unscaled_forward
-        final,ln_fs_forward = jax.lax.scan(build_ar,ln_f_ref,jnp.transpose(jnp.array([phis_forward,ws_forward])))
-        ln_fs = jnp.append(ln_f_ref,ln_fs_forward)
-
-        # Build backward process
-        phis_backward = jnp.exp(-deltas_low_reversed/ar_tau)
-        ws_backward = jnp.sqrt(-jnp.expm1(-2.*deltas_low_reversed/ar_tau))*ar_std*ln_f_steps_unscaled_backward
-        final,ln_fs_backward = jax.lax.scan(build_ar,ln_f_ref,jnp.transpose(jnp.array([phis_backward,ws_backward])))
-
-        # Combine
-        ln_fs = jnp.append(ln_fs_backward[::-1],ln_fs)
-        ln_f_steps_unscaled = jnp.append(ln_f_ref_unscaled,ln_f_steps_unscaled)
-
-        return ar_std,ar_tau,ln_fs,ln_f_steps_unscaled
-
-    @validate_sample
-    def log_prob(self,values):
-
-        # Extract params
-        ar_std,ar_tau,ln_fs,ln_f_steps_unscaled = values
-
-        # Overwrite squared exponential with quadratic exponential
-        logp = -self._halfnormal.log_prob(ar_std) - (ar_std/self.std_scale)**4
-        logp += self._transformeduniform.log_prob(ar_tau)
-        logp += jnp.sum(self._normal.log_prob(ln_f_steps_unscaled))
-
-        return logp
+    # Apply filters to combined power-law and peak
+    return (f_peak*p_m1_peak + (1.-f_peak)*p_m1_pl)*low_filter*high_filter

@@ -1,4 +1,4 @@
-name: autoregressive-pop-modeling
+name: bbh_gwb_time_delay_inference
 channels:
   - defaults
   - conda-forge

@@ -1,7 +1,9 @@
 import numpy as np
 from astropy.cosmology import Planck15
 import astropy.units as u
-from likelihoods import massModel
+from custom_distributions import massModel
+from scipy.io import loadmat
+
 
 def reweighting_function_archi(m1,m2,a1,a2,cost1,cost2,z,dVdz):
 
@@ -261,6 +263,36 @@ def initialize_ar_lnm1(all_lnm1_samples):
     initial['ws_unscaled'] = ws_unscaled
 
     return initial
+
+def get_stochastic_dict(file_path, f_high=200.):
+    """
+    Get stochastic gravitational-wave background data. Assumes a .mat file format, containing
+    the point estimate and sigma spectra, as well as the corresponding frequencies.
+    
+    file_path: str
+        Path to the .mat file containing the stochastic results
+    f_high: float
+        Highest frequency (Hz) to consider for the stochastic contribution.
+    """
+    matdata = loadmat(file_path)
+    Cf = np.array(matdata['ptEst_ff']).reshape(-1)
+    sigmas = np.array(matdata['sigma_ff']).reshape(-1)
+    freqs = np.array(matdata['freq']).reshape(-1)
+
+    # Select frequencies below f_high
+    lowFreqs = freqs<f_high
+    freqs = freqs[lowFreqs]
+    Cf = Cf[lowFreqs]
+    sigma2s = sigmas[lowFreqs]**2.
+
+    goodInds = np.where(Cf==Cf)
+    freqs = freqs[goodInds]
+    Cf = Cf[goodInds]
+    sigma2s = sigma2s[goodInds]
+
+    stochasticDict = {'freqs': freqs, 'Cf': np.real(Cf), 'sigma2s': sigma2s}
+    
+    return stochasticDict
     
 
 if __name__=="__main__":
