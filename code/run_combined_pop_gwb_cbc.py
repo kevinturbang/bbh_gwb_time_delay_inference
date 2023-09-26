@@ -10,11 +10,11 @@ from likelihoods import combined_pop_gwb_cbc_time_delay
 from getData import *
 from get_cosmo import *
 
-stochasticDict = get_stochastic_dict("../data/O3_GWB_results.mat" , f_high=200)
+stochasticDict = get_stochastic_dict("../input/O3_GWB_measurement.mat", f_high=200)
 
 # Get dictionaries holding injections and posterior samples
-injectionDict = getInjections(reweight=False)
-sampleDict = getSamples(sample_limit=2000,reweight=False)
+injectionDict = getInjections("../input/injectionDict_FAR_1_in_1.pickle")
+sampleDict = getSamples("../input/sampleDict_FAR_1_in_1_yr.pickle", sample_limit=2000)
 
 # Set up NUTS sampler over our likelihood
 kernel = NUTS(combined_pop_gwb_cbc_time_delay)
@@ -24,7 +24,7 @@ mcmc = MCMC(kernel,num_warmup=500,num_samples=3000,num_chains=nChains)
 # Choose a random key and run over our model
 rng_key = random.PRNGKey(118)
 rng_key,rng_key_ = random.split(rng_key)
-mcmc.run(rng_key_,sampleDict,injectionDict, rate_file_path="../data/delayedRateDataMD.npy", joint_analysis=True, stochasticProds=stochasticDict)
+mcmc.run(rng_key_,sampleDict,injectionDict, rate_file_path="../input/delayedRateDataMD.npy", joint_analysis=True, stochasticProds=stochasticDict)
 mcmc.print_summary()
 
 # Save out data
