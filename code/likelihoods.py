@@ -55,6 +55,10 @@ def combined_pop_gwb_cbc_time_delay(sampleDict, injectionDict, rate_file_path, j
     # bq: Power-law index on the conditional secondary mass distribution p(m2|m1)
     # mu: Mean of the chi-effective distribution
     # logsig_chi: Log10 of the chi-effective distribution's standard deviation
+    # sig_cost: Standard deviation of the spin angle distribution
+    # td_min: minimum time delay
+    # metMin_td: metallicity threshold at which the metallicity distribution decreases rapidly
+    # lambda_td: slope of the time-delay distribution
 
     logR20 = numpyro.sample("logR20",dist.Uniform(-2,1))
     alpha = numpyro.sample("alpha",dist.Normal(-2,3))
@@ -132,14 +136,13 @@ def combined_pop_gwb_cbc_time_delay(sampleDict, injectionDict, rate_file_path, j
     mergerRate = weightedFormationRates.dot(dpdt)
 
     dz = 0.01
-    zs = np.arange(0.,10.0,dz) # Whatever was used for the making of the delayed rates actually
+    zs = np.arange(0.,10.0,dz) # What was used for the making of the delayed rates actually
 
     # Normalization
     p_m1_norm = massModel(20.,alpha,mu_m1,sig_m1,10.**log_f_peak,mMax,mMin,10.**log_dmMax,10.**log_dmMin)
     p_z_norm = jnp.interp(jnp.array([0.2]), zs, mergerRate)[0]
 
     # Read out found injections
-    # Note that `pop_reweight` is the inverse of the draw weights for each event
     a1_det = injectionDict['a1']
     a2_det = injectionDict['a2']
     cost1_det = injectionDict['cost1']
@@ -179,8 +182,12 @@ def combined_pop_gwb_cbc_time_delay(sampleDict, injectionDict, rate_file_path, j
     # m2_sample: Secondary mass posterior samples
     # z_sample: Redshift posterior samples
     # dVdz_sample: Differential comoving volume at each sample location
-    # Xeff_sample: Effective spin posterior samples
+    # a1_sample: Spin magnitude posterior samples
+    # a2_sample: Spin magnitude posterior samples
+    # cost1_sample: Spin angle posterior samples
+    # cost2_sample: Spin angle posterior samples
     # priors: PE priors on each sample
+
     def logp_cbc(m1_sample,m2_sample,z_sample,dVdz_sample,a1_sample,a2_sample,cost1_sample,cost2_sample,priors):
 
         # Compute proposed population weights
@@ -219,6 +226,7 @@ def combined_pop_gwb_cbc_time_delay(sampleDict, injectionDict, rate_file_path, j
     # Tally log-likelihoods across our catalog
     numpyro.factor("logp_cbc",jnp.sum(log_ps))
 
+    # Stochastic GWB part of the likelihood
     if joint_analysis:
         
         def f_z(z):
@@ -226,10 +234,12 @@ def combined_pop_gwb_cbc_time_delay(sampleDict, injectionDict, rate_file_path, j
             rate_final = rate/jnp.sqrt(OmgM*(1.+z)**3.+OmgL)/(1.+z)
             return rate_final
         
+        # Read in the stochastic data products
         freqs = stochasticProds['freqs']
         Cf = stochasticProds['Cf']
         sigma2s = stochasticProds['sigma2s']
         
+        # Define the log likelihood for the GWB
         def logp_gwb(freqs, Cf, sigma2s):
             p_m2_new = ((1.+bq)*jnp.power(m2s_drawn,bq)/(jnp.power(m1s_drawn,1.+bq)-tmp_min**(1.+bq)))
             p_m1_new = massModel(m1s_drawn,alpha, mu_m1,sig_m1,10.**log_f_peak, mMax, mMin, 10.**log_dmMax,10.**log_dmMin)
@@ -246,4 +256,5 @@ def combined_pop_gwb_cbc_time_delay(sampleDict, injectionDict, rate_file_path, j
     
         logps_gwb = logp_gwb(freqs, Cf, sigma2s)
 
+        # Add log likelihood for GWB to the total likelihood
         numpyro.factor("logp_gwb", logps_gwb)

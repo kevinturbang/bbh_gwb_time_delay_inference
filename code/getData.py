@@ -9,6 +9,11 @@ def getInjections(injectionFile):
     """
     Function to load and preprocess found injections for use in numpyro likelihood functions.
 
+    Parameters
+    ----------
+    injectionFile: str
+        Complete path to the file containing the injections
+
     Returns
     -------
     injectionDict : dict
@@ -30,6 +35,8 @@ def getSamples(sampleDict_path, sample_limit=1000,bbh_only=True):
     
     Parameters
     ----------
+    sampleDict_path: str
+        Complete path to the file containing the CBC posterior samples
     sample_limit : int or None
         If specified, will randomly downselect posterior samples, returning N=sample_limit samples per event (default None)
     bbh_only : bool
@@ -68,10 +75,18 @@ def get_stochastic_dict(file_path, f_high=200.):
     Get stochastic gravitational-wave background data. Assumes a .mat file format, containing
     the point estimate and sigma spectra, as well as the corresponding frequencies.
     
+    Parameters
+    ----------
+
     file_path: str
         Path to the .mat file containing the stochastic results
     f_high: float
         Highest frequency (Hz) to consider for the stochastic contribution.
+
+    Returns
+    -------
+    stochasticDict: dict
+        Dictionary conatining the frequencies, cross-correlation estimator and the variance spectra.
     """
     matdata = loadmat(file_path)
     Cf = np.array(matdata['ptEst_ff']).reshape(-1)
