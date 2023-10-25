@@ -18,13 +18,14 @@ mv bbh_time_delay_data/Omega_measurement_detectable_O5_VA.mat ../input
 mv bbh_time_delay_data/Omega_measurement_undetectable_O5_VA.mat ../input/
 
 # Move input data to ../
-mv bbh_time_delay_data/O3_CBC_GWB_MD.nc .
-mv bbh_time_delay_data/O3_CBC_GWB_VA.nc .
-mv bbh_time_delay_data/O3_CBC_MD.nc .
-mv bbh_time_delay_data/O5_CBC_GWB_detectable_MD.nc .
-mv bbh_time_delay_data/O5_CBC_GWB_detectable_VA.nc .
-mv bbh_time_delay_data/O5_CBC_GWB_undetectable_MD.nc .
-mv bbh_time_delay_data/O5_CBC_GWB_undetectable_VA.nc .
+mv bbh_time_delay_data/O3_CBC_GWB_MD.hdf .
+mv bbh_time_delay_data/O3_CBC_GWB_VA.hdf .
+mv bbh_time_delay_data/O3_CBC_MD.hdf .
+mv bbh_time_delay_data/O3_CBC_VA.hdf .
+mv bbh_time_delay_data/O5_CBC_GWB_detectable_MD.hdf .
+mv bbh_time_delay_data/O5_CBC_GWB_detectable_VA.hdf .
+mv bbh_time_delay_data/O5_CBC_GWB_undetectable_MD.hdf .
+mv bbh_time_delay_data/O5_CBC_GWB_undetectable_VA.hdf .
 
 # Move input data to ../mock_gwb_O5/
 mv bbh_time_delay_data/AplusDesign.txt ../mock_gwb_O5/

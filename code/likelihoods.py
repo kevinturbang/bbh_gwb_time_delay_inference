@@ -59,6 +59,7 @@ def combined_pop_gwb_cbc_time_delay(sampleDict, injectionDict, rate_file_path, j
     # td_min: minimum time delay
     # metMin_td: metallicity threshold at which the metallicity distribution decreases rapidly
     # lambda_td: slope of the time-delay distribution
+    # R20: merger rate amplitude at z=0.2 and m1 = 20 Msun
 
     logR20 = numpyro.sample("logR20",dist.Uniform(-2,1))
     alpha = numpyro.sample("alpha",dist.Normal(-2,3))
