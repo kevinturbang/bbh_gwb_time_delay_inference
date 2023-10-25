@@ -2,6 +2,9 @@ import jax.numpy as jnp
 import numpy as np
 from jax.scipy.special import erf
 
+tmp_min=2
+tmp_max=100
+
 def truncatedNormal(samples,mu,sigma,lowCutoff,highCutoff):
 
     """
