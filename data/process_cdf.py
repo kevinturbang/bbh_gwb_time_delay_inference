@@ -2,8 +2,6 @@ import arviz as az
 import numpy as np
 import h5py
 import argparse
-#import sys
-#sys.path.append('./../code/')
 
 def process(inputfile, outputfile):
     # Load inference results
