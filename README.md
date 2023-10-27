@@ -1,6 +1,10 @@
 # bbh_gwb_time_delay_inference
 
-This repository contains the code and necessary material to reproduce the results of ... . In this paper, we infer the
+This repository contains the code and necessary material to reproduce the results of
+
+"**The metallicity dependence and evolutionary times of merging binary black holes: Combined constraints from individual gravitational-wave detections and the stochastic background.**"
+
+In this paper, we infer the
 time-delay distribution and metallicity-dependent star formation rate parameters from gravitational-wave (GW) data, using
 a joint approach, combining individual binary black hole mergers and upper limits on the gravitational-wave background. We
 consider the GW events from LIGO-Virgo-KAGRA's third observing run, as well as current upper limits on a gravitational-wave
