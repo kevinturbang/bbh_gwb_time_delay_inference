@@ -7,7 +7,7 @@ consider the GW events from LIGO-Virgo-KAGRA's third observing run, as well as c
 background. In addition, we explore LIGO-Virgo-KAGRA's future Advanced A+ design sensitivity and provide results for that scenario
 as well.
 
-The data can be downloaded from Zenodo [here](...). A pre-print of the paper can be found [here]().
+The data can be downloaded from Zenodo [here](https://zenodo.org/doi/10.5281/zenodo.10016289). A pre-print of the paper can be found [here](https://arxiv.org/abs/2310.17625).
 
 ## Getting started
 
@@ -20,6 +20,6 @@ the environment, simply call `conda activate bbh_gwb_time_delay_inference`.
 The repository contains several folders, each with a specific purpose:
 
 - **code**: Contains the code to run the analysis which produced the results in this paper.
-- **data**: Contains the script to download from Zenodo [here](...) the data used in this paper, as well as the results produced in this paper.
+- **data**: Contains the script to download from Zenodo [here](https://zenodo.org/doi/10.5281/zenodo.10016289), the data used in this paper, as well as the results produced in this paper.
 - **figures**: Contains several notebooks to reproduce the figures of the paper. Note that all the data should have been downloaded
-    from Zenodo [here](...) in order to run the notebooks in this folder.
+    from Zenodo [here](https://zenodo.org/doi/10.5281/zenodo.10016289) in order to run the notebooks in this folder.
