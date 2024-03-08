@@ -1,6 +1,6 @@
 # Code directory
 
-This subdirectory contains the actual analysis code used to produce the results of the [paper](...). The main script
+This subdirectory contains the actual analysis code used to produce the results of the [paper](https://arxiv.org/abs/2310.17625). The main script
 to perform the analysis is `run_combined_pop_gwb_cbc.py`. Below, we provide some details on how to change some aspects of
 the analysis.
 
