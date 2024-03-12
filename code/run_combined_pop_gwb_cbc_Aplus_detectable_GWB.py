@@ -8,9 +8,8 @@ from jax import random
 import arviz as az
 from likelihoods import combined_pop_gwb_cbc_time_delay
 from getData import *
-from get_cosmo import *
 
-stochasticDict = get_stochastic_dict("../input/Omega_measurement_detectable_O5_MD.mat.mat", f_high=200)
+stochasticDict = get_stochastic_dict("../input/Omega_measurement_detectable_O5_MD.mat", f_high=200)
 
 # Get dictionaries holding injections and posterior samples
 injectionDict = getInjections("../input/injectionDict_FAR_1_in_1.pickle")

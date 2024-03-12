@@ -8,7 +8,6 @@ from jax import random
 import arviz as az
 from likelihoods import combined_pop_gwb_cbc_time_delay
 from getData import *
-from get_cosmo import *
 
 stochasticDict = get_stochastic_dict("../input/O3_GWB_measurement.mat", f_high=200)
 
