@@ -74,14 +74,17 @@ def unpack_rate_file(filename):
         Array containing the formation rates
     tdelays: array-like
         Array containing the time-delays
+    zs: array-like
+        Array containing the redshifts
     zformation: array-like
         Array containing the foramtion redshifts
     """
     rateData = np.load(filename, allow_pickle=True)[()]
     formationRates = rateData['formationRates']
     tdelays = rateData['tds']
-    zformation = rateData['zs']
-    return formationRates, tdelays, zformation
+    zformation = rateData['formationRedshifts']
+    zs = rateData['zs']
+    return formationRates, tdelays, zformation, zs
 
 def get_value_from_logit(logit_x,x_min,x_max):
     """

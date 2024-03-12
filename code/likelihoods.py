@@ -13,7 +13,6 @@ from gwBackground import *
 logit_std = 2.5
 tmp_max = 100.
 tmp_min = 2.
-all_zs = np.linspace(0,10,200)
 
 ##################################################
 #######            Likelihood              #######
@@ -38,7 +37,7 @@ def combined_pop_gwb_cbc_time_delay(sampleDict, injectionDict, rate_file_path, j
         variance spectrum ('sigma2s') from stochastic search
     """
     
-    formationRates, tdelays, zformation = unpack_rate_file(rate_file_path)
+    formationRates, tdelays, zformation, zs = unpack_rate_file(rate_file_path)
     
     if joint_analysis:
         m1s_drawn, m2s_drawn, zs_drawn, p_m1_old, p_m2_old, p_z_old, dEdfs = precompute_omega_weights(stochasticProds['freqs'], N=20000, tmp_min = tmp_min, tmp_max=tmp_max)
@@ -78,7 +77,7 @@ def combined_pop_gwb_cbc_time_delay(sampleDict, injectionDict, rate_file_path, j
     metMin_td = numpyro.deterministic("metMin_td",10.**logmetMin_td)
     
     logit_log_td_min = numpyro.sample("logit_log_td_min",dist.Normal(0,logit_std))
-    log_td_min,jac_log_td_min = get_value_from_logit(logit_log_td_min,-5. ,0.)
+    log_td_min,jac_log_td_min = get_value_from_logit(logit_log_td_min,-3. ,0.)
     numpyro.deterministic("log_td_min",log_td_min)
     numpyro.factor("p_log_td_min",logit_log_td_min**2/(2.*logit_std**2)-jnp.log(jac_log_td_min))
     td_min = numpyro.deterministic("td_min",10.**log_td_min)
@@ -128,16 +127,13 @@ def combined_pop_gwb_cbc_time_delay(sampleDict, injectionDict, rate_file_path, j
     mu_cost = 1.
 
     # Merger rate stuff
-    fs = gammainc(0.84,(metMin_td**2.)*np.power(10.,0.3*zformation))[...,None]
+    fs = gammainc(0.84,(metMin_td**2.)*np.power(10.,0.3*zformation))
     weightedFormationRates = formationRates*fs
 
     dpdt = jnp.power(tdelays,lambda_td)
     dpdt = jnp.where(tdelays>td_min,dpdt,0)
     dpdt = jnp.where(tdelays<13.5,dpdt,0)
     mergerRate = weightedFormationRates.dot(dpdt)
-
-    dz = 0.01
-    zs = np.arange(0.,10.0,dz) # What was used for the making of the delayed rates actually
 
     # Normalization
     p_m1_norm = massModel(20.,alpha,mu_m1,sig_m1,10.**log_f_peak,mMax,mMin,10.**log_dmMax,10.**log_dmMin)
@@ -231,7 +227,7 @@ def combined_pop_gwb_cbc_time_delay(sampleDict, injectionDict, rate_file_path, j
     if joint_analysis:
         
         def f_z(z):
-            rate = jnp.interp(z, zformation, mergerRate)
+            rate = jnp.interp(z, zs, mergerRate)
             rate_final = rate/jnp.sqrt(OmgM*(1.+z)**3.+OmgL)/(1.+z)
             return rate_final
         
