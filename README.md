@@ -11,7 +11,7 @@ consider the GW events from LIGO-Virgo-KAGRA's third observing run, as well as c
 background. In addition, we explore LIGO-Virgo-KAGRA's future Advanced A+ design sensitivity and provide results for that scenario
 as well.
 
-The data can be downloaded from Zenodo [here](https://zenodo.org/doi/10.5281/zenodo.10016289). A pre-print of the paper can be found [here](https://arxiv.org/abs/2310.17625).
+The data can be downloaded from Zenodo [here](https://zenodo.org/doi/10.5281/zenodo.10016289). A pre-print of the paper can be found [here](https://arxiv.org/abs/2310.17625), with the published article [here](https://iopscience.iop.org/article/10.3847/1538-4357/ad3d5c0).
 
 ## Getting started
 
